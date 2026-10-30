@@ -1,0 +1,43 @@
+name: Sync Global Files
+
+on:
+  push:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout .github repo
+        uses: actions/checkout@v4
+
+      - name: Sync Files to All Repos
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
+        run: |
+          REPOS=$(gh repo list ${{ github.repository_owner }} --limit 200 --json name -q '.[].name')
+
+          for REPO in $REPOS; do
+            if [ "$REPO" = ".github" ]; then continue; fi
+            
+            echo "Syncing files to $REPO..."
+            
+            git clone https://x-access-token:${{ secrets.ORG_AUTOMATION_TOKEN }}@://github.com{{ github.repository_owner }}/$REPO.git target-repo
+            
+            cp LICENSE target-repo/
+            cp customexample.md target-repo/
+            
+            cd target-repo
+            if [ -n "$(git status --porcelain)" ]; then
+              git config user.name "MrTekPet22"
+              git config user.email "tekpetdigital@duck.com"
+              git add .
+              git commit -m "chore: sync global community files [skip ci]"
+              git push
+            fi
+            cd ..
+            rm -rf target-repo
+          done
