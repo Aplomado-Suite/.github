@@ -14,31 +14,64 @@ jobs:
       - name: Checkout .github repo
         uses: actions/checkout@v4
 
-      - name: Sync Files to All Repos
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
-          ORG_NAME: ${{ github.repository_owner }}
-        run: |
-          REPOS=$(gh repo list "$ORG_NAME" --limit 200 --json name --jq '.[].name')
-
-          for REPO in $REPOS; do
-            if [ "$REPO" = ".github" ]; then continue; fi
+      - name: Sync Files via API
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ORG_AUTOMATION_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
             
-            echo "Syncing files to $REPO..."
+            const licenseContent = fs.readFileSync('LICENSE', 'utf8');
+            const exampleContent = fs.readFileSync('customexample.md', 'utf8');
             
-            git clone https://x-access-token:${{ secrets.ORG_AUTOMATION_TOKEN }}@://github.com{ORG_NAME}/${REPO}.git target-repo
+            const filesToSync = [
+              { path: 'LICENSE', content: licenseContent },
+              { path: 'customexample.md', content: exampleContent }
+            ];
             
-            cp LICENSE target-repo/
-            cp customexample.md target-repo/
+            const repos = await github.paginate(github.rest.repos.listForOrg, {
+              org: owner,
+              per_page: 100
+            });
             
-            cd target-repo
-            if [ -n "$(git status --porcelain)" ]; then
-              git config user.name "MrTekPet22"
-              git config user.email "tekpetdigital@duck.com"
-              git add .
-              git commit -m "chore: sync global community files [skip ci]"
-              git push
-            fi
-            cd ..
-            rm -rf target-repo
-          done
+            for (const repo of repos) {
+              if (repo.name === '.github' || repo.archived) continue;
+              
+              console.log(`Syncing files to ${repo.name}...`);
+              
+              for (const file of filesToSync) {
+                let sha;
+                try {
+                  const { data } = await github.rest.repositories.getContent({
+                    owner,
+                    repo: repo.name,
+                    path: file.path
+                  });
+                  sha = data.sha;
+                  
+                  if (Buffer.from(data.content, 'base64').toString('utf8') === file.content) {
+                    continue;
+                  }
+                } catch (e) {
+                  if (e.status !== 404) throw e;
+                }
+                
+                await github.rest.repositories.createOrUpdateFileContents({
+                  owner,
+                  repo: repo.name,
+                  path: file.path,
+                  message: 'chore: sync global community files [skip ci]',
+                  content: Buffer.from(file.content).toString('base64'),
+                  sha,
+                  committer: {
+                    name: 'MrTekPet22',
+                    email: 'tekpetdigital@duck.com'
+                  },
+                  author: {
+                    name: 'MrTekPet22',
+                    email: 'tekpetdigital@duck.com'
+                  }
+                });
+              }
+            }
