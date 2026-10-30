@@ -17,15 +17,16 @@ jobs:
       - name: Sync Files to All Repos
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
+          ORG_NAME: ${{ github.repository_owner }}
         run: |
-          REPOS=$(gh repo list ${{ github.repository_owner }} --limit 200 --json name --jq '.[].name')
+          REPOS=$(gh repo list "$ORG_NAME" --limit 200 --json name --jq '.[].name')
 
           for REPO in $REPOS; do
             if [ "$REPO" = ".github" ]; then continue; fi
             
             echo "Syncing files to $REPO..."
             
-            git clone https://x-access-token:${{ secrets.ORG_AUTOMATION_TOKEN }}@://github.com{{ github.repository_owner }}/$REPO.git target-repo
+            git clone https://x-access-token:${{ secrets.ORG_AUTOMATION_TOKEN }}@://github.com{ORG_NAME}/${REPO}.git target-repo
             
             cp LICENSE target-repo/
             cp customexample.md target-repo/
