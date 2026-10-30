@@ -18,7 +18,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
         run: |
-          REPOS=$(gh repo list ${{ github.repository_owner }} --limit 200 --json name -q '.[].name')
+          REPOS=$(gh repo list ${{ github.repository_owner }} --limit 200 --json name --jq '.[].name')
 
           for REPO in $REPOS; do
             if [ "$REPO" = ".github" ]; then continue; fi
