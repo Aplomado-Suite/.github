@@ -22,13 +22,21 @@ jobs:
             const fs = require('fs');
             const owner = context.repo.owner;
             
-            const licenseContent = fs.readFileSync('LICENSE', 'utf8');
-            const exampleContent = fs.readFileSync('customexample.md', 'utf8');
+            const licenceContent = fs.readFileSync('LICENCE', 'utf8');
+            const conductContent = fs.readFileSync('CODE_OF_CONDUCT.md', 'utf8');
+            const licensingContent = fs.readFileSync('LICENSING.md', 'utf8');
+            const securityContent = fs.readFileSync('SECURITY.md', 'utf8');
+            const supportContent = fs.readFileSync('SUPPORT.md', 'utf8');
+            const contributingContent = fs.readFileSync('CONTRIBUTING.md', 'utf8');
             
             const filesToSync = [
-              { path: 'LICENSE', content: licenseContent },
-              { path: 'customexample.md', content: exampleContent }
-            ];
+                { path: 'LICENSE', content: licenceContent },
+                { path: 'CODE_OF_CONDUCT.md', content: conductContent },
+                { path: 'LICENSING.md', content: licensingContent },
+                { path: 'SECURITY.md', content: securityContent },
+                { path: 'SUPPORT.md', content: supportContent },
+                { path: 'CONTRIBUTING.md', content: contributingContent }
+              ];
             
             const repos = await github.paginate(github.rest.repos.listForOrg, {
               org: owner,
